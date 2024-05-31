@@ -107,6 +107,7 @@ glc-default-span tells how far around a visited point not to visit again.")
 (defvar glc-current-span 8 "Internal for goto-last-change.\nA copy of glc-default-span or the ARG passed to goto-last-change.")
 (defvar glc-probe-depth 0 "Internal for goto-last-change.\nIt is non-zero between successive goto-last-change.")
 (defvar glc-direction 1 "Direction goto-last-change moves towards.")
+(defvar glc-no-errors nil "Don't throw errors if no change is available to go to.\nAs a replacement for the error a message will be shown at the bottom of the screen and to the *Message* buffer.")
 
 ;;todo: Find begin and end of line, then use it somewhere
 
@@ -261,8 +262,21 @@ every point of edit and a message shows what change was made there.
 In this case it may go to the same point twice.
 \nThis command uses undo information. If undo is disabled, so is this command.
 At times, when undo information becomes too large, the oldest information is
-discarded. See variable `undo-limit'."
+discarded. See variable `undo-limit'.
+Print messages instead of signaling errors when `glc-no-errors' is set."
   (interactive "P")
+  (if glc-no-errors
+      (condition-case err
+          (goto--last-change arg)
+        (error (message "goto-chg: %s" (error-message-string err))))
+    (goto--last-change arg)))
+
+(defun goto--last-change (arg)
+  "Internal function that gets called by `goto-last-change'
+with a `condition-case' wrapper to respect `glc-no-errors',
+Calling this method directly will ignore the value of `glc-no-errors.'
+
+For documentation of the behavior of this function see function doc of `goto-last-change.'"
   (cond ((not (eq this-command last-command))
          ;; Start a glc sequence
          ;; Don't go to current point if last command was an obvious edit
